@@ -190,6 +190,32 @@ class GameEngine:
           elif cell == CHEST and self.player.has_key:
            self.won = True
            self.status = "Treasure found!"
+    
+    def draw_minimap(self):
+        map_tile = 5
+        margin = 10
+        map_width = COLS * map_tile
+        map_height = ROWS * map_tile
+
+        x0 = WIDTH - map_width - margin
+        y0 = margin
+
+        pygame.draw.rect(
+            self.screen, (15, 15, 25),
+            (x0 - 3, y0 - 3, map_width + 6, map_height + 6)
+        )
+
+        for r in range(ROWS):
+            for c in range(COLS):
+                color = (65, 60, 75) if self.grid[r][c] == WALL else (205, 195, 175)
+                pygame.draw.rect(
+                    self.screen, color,
+                    (x0 + c * map_tile, y0 + r * map_tile, map_tile, map_tile)
+                )
+
+        px = x0 + (self.player.rect.centerx // TILE) * map_tile
+        py = y0 + (self.player.rect.centery // TILE) * map_tile
+        pygame.draw.rect(self.screen, (50, 130, 255), (px, py, map_tile, map_tile))
 
     def draw(self):
         self.screen.fill((30,25,40))
@@ -220,6 +246,7 @@ class GameEngine:
                     )
 
         self.player.draw(self.screen)
+        self.draw_minimap()
         if self.guard:
          self.guard.draw(self.screen)
         hud = pygame.Rect(0,ROWS*TILE,WIDTH,50)
