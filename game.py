@@ -5,6 +5,8 @@ TILE = 40
 COLS, ROWS = 20, 15
 WALL, FLOOR, CHEST, KEY, TRAP = 0, 1, 2, 3, 4
 SPEED = 3
+GUARD_SPEED = 2
+GUARD_SIZE = 26
 
 def generate_world():
     grid = [[WALL]*COLS for _ in range(ROWS)]
@@ -84,6 +86,26 @@ class Player:
             pygame.draw.circle(screen, (220,220,60), (self.rect.right-6, self.rect.top+6), 5)
 
 
+class Guard:
+    def __init__(self, x, y, patrol_distance=80):
+        self.rect = pygame.Rect(x, y, GUARD_SIZE, GUARD_SIZE)
+        self.start_x = x
+        self.end_x = x + patrol_distance
+        self.speed = GUARD_SPEED
+
+    def update(self):
+        self.rect.x += self.speed
+
+        if self.rect.right >= self.end_x:
+            self.rect.right = self.end_x
+            self.speed = -GUARD_SPEED
+        elif self.rect.left <= self.start_x:
+            self.rect.left = self.start_x
+            self.speed = GUARD_SPEED
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, (200, 45, 55), self.rect, border_radius=6)
+
 WIDTH = COLS * TILE
 HEIGHT = ROWS * TILE + 50
 FPS = 60
@@ -106,7 +128,27 @@ class GameEngine:
         else:
             sx, sy = TILE+6, TILE+6
         self.player = Player(sx, sy)
+        
         self.start_position = (sx, sy)
+
+        chest_pos = next(
+            (
+                (c, r)
+                for r in range(ROWS)
+                for c in range(COLS)
+                if self.grid[r][c] == CHEST
+            ),
+            None
+        )
+
+        if chest_pos:
+            cx, cy = chest_pos
+            guard_x = cx * TILE
+            guard_y = cy * TILE + (TILE - GUARD_SIZE) // 2
+            self.guard = Guard(guard_x, guard_y)
+        else:
+            self.guard = None
+
         self.won = False
         self.status = "Find the KEY, then the CHEST!"
     def reset_player(self):
@@ -118,9 +160,18 @@ class GameEngine:
         return True
 
     def update(self):
-        if self.won: return
+        if self.won:
+            return
+        if self.guard:
+            self.guard.update()
         keys = pygame.key.get_pressed()
         self.player.move(keys, self.grid, ROWS, COLS)
+        
+        if self.guard and self.player.rect.colliderect(self.guard.rect):
+            self.reset_player()
+            self.status = "Guard caught you! Back to start!"
+            return
+
         pr = self.player.rect.centery // TILE
         pc = self.player.rect.centerx // TILE
         
@@ -169,6 +220,8 @@ class GameEngine:
                     )
 
         self.player.draw(self.screen)
+        if self.guard:
+         self.guard.draw(self.screen)
         hud = pygame.Rect(0,ROWS*TILE,WIDTH,50)
         pygame.draw.rect(self.screen,(20,20,35),hud)
         st = self.font.render(self.status+"  |  R=Restart", True, (200,200,200))
