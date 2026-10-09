@@ -249,10 +249,30 @@ class GameEngine:
         self.draw_minimap()
         if self.guard:
          self.guard.draw(self.screen)
-        hud = pygame.Rect(0,ROWS*TILE,WIDTH,50)
-        pygame.draw.rect(self.screen,(20,20,35),hud)
-        st = self.font.render(self.status+"  |  R=Restart", True, (200,200,200))
-        self.screen.blit(st,(8,ROWS*TILE+13))
+        
+        hud = pygame.Rect(0, ROWS*TILE, WIDTH, 50)
+        pygame.draw.rect(self.screen, (20,20,35), hud)
+
+        st = self.font.render(self.status + "  |  R=Restart", True, (200,200,200))
+        self.screen.blit(st, (8, ROWS*TILE + 13))
+
+        # Inventory slot
+        slot_rect = pygame.Rect(WIDTH - 55, ROWS*TILE + 5, 40, 40)
+        pygame.draw.rect(self.screen, (100,100,115), slot_rect, 2)
+
+        if self.player.has_key:
+            key_x = slot_rect.centerx
+            key_y = slot_rect.centery
+            pygame.draw.circle(self.screen, (255,220,50), (key_x - 5, key_y - 5), 7, 3)
+            pygame.draw.line(
+                self.screen, (255,220,50),
+                (key_x, key_y), (key_x + 10, key_y + 10), 3
+            )
+            pygame.draw.line(
+                self.screen, (255,220,50),
+                (key_x + 6, key_y + 6), (key_x + 10, key_y + 6), 3
+            )
+
         if self.won:
             ov=pygame.Surface((WIDTH,ROWS*TILE),pygame.SRCALPHA)
             ov.fill((0,0,0,140))
