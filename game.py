@@ -3,7 +3,7 @@ import random
 
 TILE = 40
 COLS, ROWS = 20, 15
-WALL, FLOOR, CHEST, KEY = 0, 1, 2, 3
+WALL, FLOOR, CHEST, KEY, TRAP = 0, 1, 2, 3, 4
 SPEED = 3
 
 def generate_world():
@@ -38,6 +38,11 @@ def generate_world():
         cr, ck = rooms[-1], rooms[-2]
         grid[cr.centery][cr.centerx] = CHEST
         grid[ck.centery][ck.centerx] = KEY
+    for room in rooms[1:-1]:
+        tx, ty = room.centerx, room.centery
+
+        if grid[ty][tx] == FLOOR:
+            grid[ty][tx] = TRAP
 
     start = rooms[0] if rooms else None
     return grid, start
@@ -47,6 +52,7 @@ COLORS = {
     FLOOR: (200,190,170),
     CHEST: (200,160,30),
     KEY: (220,220,60),
+    TRAP: (190,50,50),
 }
 
 class Player:
@@ -100,9 +106,11 @@ class GameEngine:
         else:
             sx, sy = TILE+6, TILE+6
         self.player = Player(sx, sy)
+        self.start_position = (sx, sy)
         self.won = False
         self.status = "Find the KEY, then the CHEST!"
-
+    def reset_player(self):
+        self.player.rect.topleft = self.start_position
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT: return False
@@ -115,15 +123,22 @@ class GameEngine:
         self.player.move(keys, self.grid, ROWS, COLS)
         pr = self.player.rect.centery // TILE
         pc = self.player.rect.centerx // TILE
-        if 0<=pr<ROWS and 0<=pc<COLS:
-            cell = self.grid[pr][pc]
-            if cell == KEY:
-                self.player.has_key = True
-                self.grid[pr][pc] = FLOOR
-                self.status = "Got the key! Find the CHEST!"
-            elif cell == CHEST and self.player.has_key:
-                self.won = True
-                self.status = "Treasure found!"
+        
+        if 0 <= pr < ROWS and 0 <= pc < COLS:
+          cell = self.grid[pr][pc]
+
+          if cell == TRAP:
+           self.reset_player()
+           self.status = "Trap triggered! Back to start!"
+
+          elif cell == KEY:
+           self.player.has_key = True
+           self.grid[pr][pc] = FLOOR
+           self.status = "Got the key! Find the CHEST!"
+
+          elif cell == CHEST and self.player.has_key:
+           self.won = True
+           self.status = "Treasure found!"
 
     def draw(self):
         self.screen.fill((30,25,40))
@@ -132,10 +147,27 @@ class GameEngine:
                 cell = self.grid[r][c]
                 rect = pygame.Rect(c*TILE, r*TILE, TILE, TILE)
                 pygame.draw.rect(self.screen, COLORS[cell], rect)
+                
                 if cell == KEY:
-                    pygame.draw.circle(self.screen, (255,240,60),(c*TILE+TILE//2, r*TILE+TILE//2),10)
+                   pygame.draw.circle(
+                       self.screen, (255,240,60),
+                          (c*TILE+TILE//2, r*TILE+TILE//2), 10
+                    )
                 elif cell == CHEST:
-                    pygame.draw.rect(self.screen,(180,120,20),rect.inflate(-12,-12),border_radius=4)
+                    pygame.draw.rect(
+                       self.screen,(180,120,20),
+                             rect.inflate(-12,-12), border_radius=4
+                    )
+                elif cell == TRAP:
+                    pygame.draw.polygon(
+                        self.screen, (130,20,20),
+                        [
+                        (c*TILE+TILE//2, r*TILE+7),
+                        (c*TILE+TILE-7, r*TILE+TILE-7),
+                        (c*TILE+7, r*TILE+TILE-7)
+                        ]
+                    )
+
         self.player.draw(self.screen)
         hud = pygame.Rect(0,ROWS*TILE,WIDTH,50)
         pygame.draw.rect(self.screen,(20,20,35),hud)
